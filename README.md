@@ -8,7 +8,7 @@ A simple way to watch a movie together with a partner over the network.
 
 1. Click on code
 ![](https://i.imgur.com/AVwsB0V.png)
-2. Click on **Download ZIP**.
+2. Click on [**Download ZIP**](https://github.com/folliejester/SyncPlay/archive/refs/heads/main.zip).
 3. Extract the downloaded ZIP file to a folder (for example: `C:\Downloads\SyncPlay`).
 
 ---
