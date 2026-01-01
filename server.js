@@ -8,6 +8,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 const mime = require('mime');
 const srtToVtt = require('./utils/srtToVtt');
+const os = require('os');
 
 const app = express();
 const server = http.createServer(app);
@@ -705,6 +706,19 @@ io.on('connection', (socket) => {
   });
 });
 
+function getLocalIp() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
 server.listen(PORT, () => {
-  console.log(`Server on http://localhost:${PORT}`);
+  const ip = getLocalIp();
+  console.log(`Server on http://${ip}:${PORT}`);
 });
