@@ -1,10 +1,15 @@
 {
   "name": "movie-sync",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Self-hosted 2-person synchronized movie-watch app (Node.js, Express, Socket.io)",
-  "main": "server.js",
+  "main": "main.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "electron:dev": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
@@ -12,5 +17,27 @@
     "mime": "^3.0.0",
     "os": "^0.1.2",
     "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.syncplay.desktop",
+    "productName": "SyncPlay",
+    "icon": "public/logo.png",
+    "files": [
+      "main.js",
+      "server.js",
+      "public/**/*",
+      "utils/**/*",
+      "video/**/*",
+      "avatar/**/*",
+      "newsms.mp3",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    }
   }
 }

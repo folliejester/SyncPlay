@@ -1,5 +1,3 @@
-require('dotenv').config();
-
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -10,16 +8,27 @@ const mime = require('mime');
 const srtToVtt = require('./utils/srtToVtt');
 const os = require('os');
 
+require('dotenv').config({
+  path: path.join(process.env.SYNCPLAY_DATA_ROOT || __dirname, '.env')
+});
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = process.env.PORT || 3001;
-const ROOT = __dirname;
-const PUBLIC_DIR = path.join(ROOT, 'public');
-const VIDEO_DIR = path.join(ROOT, 'video');
-const AVATAR_DIR = path.join(ROOT, 'avatar');
-const SMS_SOUND = path.join(ROOT, 'newsms.mp3'); 
+const PORT = parseInt(process.env.PORT || '3001', 10);
+
+const APP_ROOT = __dirname;
+const DATA_ROOT = process.env.SYNCPLAY_DATA_ROOT || APP_ROOT;
+
+const PUBLIC_DIR = path.join(APP_ROOT, 'public');
+const VIDEO_DIR = path.join(DATA_ROOT, 'video');
+const AVATAR_DIR = path.join(APP_ROOT, 'avatar');
+const SMS_SOUND = path.join(APP_ROOT, 'newsms.mp3');
+
+if (!fs.existsSync(VIDEO_DIR)) {
+  fs.mkdirSync(VIDEO_DIR, { recursive: true });
+}
 
 const OMDB_API_KEY = process.env.OMDB_API_KEY;
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
@@ -149,19 +158,15 @@ async function getMovieInfo() {
 
   const videoPath = getFirstVideoPath();
   if (!videoPath) {
-    //console.log('[movieInfo] no video found in', VIDEO_DIR);
     return null;
   }
 
   const { title, year } = guessTitleAndYear(videoPath);
-  //console.log('[movieInfo] guessed from filename:', { videoPath, title, year });
-
+  
   movieInfoPromise = queryOmdb(title, year)
     .then((info) => {
       if (!info) {
-        //console.log('[movieInfo] OMDB returned no match');
       } else {
-        //console.log('[movieInfo] OMDB match:', info.Title || info.title, info.Year || info.year, info.imdbID);
       }
       cachedMovieInfo = info || null;
       return cachedMovieInfo;
@@ -169,7 +174,6 @@ async function getMovieInfo() {
     .finally(() => {
       movieInfoPromise = null;
     });
-
   return movieInfoPromise;
 }
 
@@ -404,9 +408,7 @@ app.get('/stream', (req, res) => {
 });
 
 app.get('/subtitle.vtt', (req, res) => {
-  //console.log('[subtitle] Request for /subtitle.vtt');
   const videoPath = getFirstVideoPath();
-  //console.log('[subtitle] Current video:', videoPath);
   const subtitlePath = getMatchingSrt(videoPath);
 
   if (!subtitlePath) {
@@ -414,9 +416,6 @@ app.get('/subtitle.vtt', (req, res) => {
     res.status(404).send('No matching subtitle');
     return;
   }
-
-  //console.log('[subtitle] Using subtitle file:', subtitlePath);
-
   try {
     const stat = fs.statSync(subtitlePath);
     const cached = vttCache.get(subtitlePath);
@@ -718,7 +717,47 @@ function getLocalIp() {
   return 'localhost';
 }
 
-server.listen(PORT, () => {
-  const ip = getLocalIp();
-  console.log(`Server on http://${ip}:${PORT}`);
-});
+function startServer(startPort = PORT, maxTries = 20) {
+  return new Promise((resolve, reject) => {
+    let currentPort = startPort;
+
+    const tryListen = () => {
+      const onError = (err) => {
+        server.removeListener('listening', onListening);
+        server.removeListener('error', onError);
+
+        if ((err.code === 'EADDRINUSE' || err.code === 'EACCES') && maxTries > 1) {
+          currentPort += 1;
+          maxTries -= 1;
+          console.warn(`Port ${currentPort - 1} unavailable (${err.code}), trying ${currentPort}...`);
+          setTimeout(tryListen, 50);
+        } else {
+          reject(err);
+        }
+      };
+
+      const onListening = () => {
+        server.removeListener('error', onError);
+        const addr = server.address();
+        const actualPort = addr && typeof addr.port === 'number' ? addr.port : currentPort;
+        const ip = getLocalIp();
+        console.log(`Server on http://${ip}:${actualPort}`);
+        resolve({ port: actualPort, ip, server });
+      };
+
+      server.once('error', onError);
+      server.once('listening', onListening);
+      server.listen(currentPort);
+    };
+
+    tryListen();
+  });
+}
+
+if (require.main === module) {
+  startServer().catch(() => {
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { startServer };
