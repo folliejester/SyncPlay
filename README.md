@@ -97,3 +97,5 @@ node server.js
 - Repo: <https://github.com/folliejester/SyncPlay>  
 - Avatar art: [x.com/emia_icons](https://x.com/emia_icons)  
 - Love the project? Donate: <https://donate.rxo.me>
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/N4N1HECT1)
